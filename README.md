@@ -8,7 +8,7 @@ Desired state for the todo app cluster (GitOps). ArgoCD watches this repo and sy
 |---|---|
 | `apps/` | ArgoCD Applications (app-of-apps via `root-app.yaml`) |
 | `charts/todo-app/` | Helm chart — frontend, backend, Postgres, ingress |
-| `platform/` | Namespaces, cert-manager issuers, monitoring & Velero values |
+| `platform/` | Namespaces, cert-manager issuers, monitoring values |
 | `jobs/` | CronJobs — DB backup, image cleanup reminder |
 
 ## CI
@@ -34,7 +34,7 @@ helm package ./charts/todo-app --destination dist
 
 1. Install ArgoCD on the cluster  
 2. `kubectl apply -f apps/root-app.yaml`  
-3. Root app syncs child apps (namespaces → cert-manager → todo-app → monitoring → velero → jobs)
+3. Root app syncs child apps (namespaces → cert-manager → todo-app → monitoring → jobs)
 
 ## Deploy flow
 
@@ -44,7 +44,6 @@ helm package ./charts/todo-app --destination dist
 
 ## Notes
 
-- Single env: **prod** on one EC2 / k3s node (`t3.micro` is tight — monitoring/Velero may need to stay paused)  
+- Single env: **prod** on one EC2 / k3s node (`t3.micro` is tight — monitoring may need to stay paused)  
 - Replace `changeme` secrets and `admin@example.com` before real TLS  
-- Velero needs a `cloud-credentials` secret in the `velero` namespace  
 - DB backup CronJob uploads to `s3://todo-app-tfstate-victor/db-backups/` (EC2 instance role)
