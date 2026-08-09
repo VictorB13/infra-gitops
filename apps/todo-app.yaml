@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: todo-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/VictorB13/infra-gitops.git
+    targetRevision: main
+    path: charts/todo-app
+    helm:
+      valueFiles:
+        - values-prod.yaml
+      releaseName: todo-app
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: todo
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+
+  # Optional: ignore noisy replica/status diffs
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /status

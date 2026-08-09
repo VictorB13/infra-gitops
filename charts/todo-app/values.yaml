@@ -1,0 +1,75 @@
+# Default chart values (safe baselines).
+# Production overrides live in values-prod.yaml.
+
+nameOverride: ""
+fullnameOverride: ""
+
+namespace: todo
+
+backend:
+  image:
+    repository: victorbutkov/todo-backend   
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+frontend:
+  image:
+    repository: victorbutkov/todo-frontend
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 80
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+postgres:
+  image:
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+  port: 5432
+  database: tododb
+  user: postgres
+  # password comes from secret (see values-prod / secret template)
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""   # empty = cluster default (local-path on k3s)
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+ingress:
+  enabled: true
+  className: traefik
+  host: todo.local    # override in values-prod with real DNS / IP hostname
+  tls:
+    enabled: false
+    secretName: todo-tls
+
+# Non-secret app config
+config:
+  # Browser calls this URL for the API (no trailing /api — app.js already adds /api/...)
+  apiUrl: http://todo.local
+
+# Secrets — override in values-prod or inject via SealedSecrets later
+secrets:
+  postgresPassword: "changeme"
+  secretKey: "changeme-jwt-secret"

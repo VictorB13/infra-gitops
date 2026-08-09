@@ -1,0 +1,138 @@
+name: GitOps CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  helm-chart:
+    name: Helm lint, template & package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+
+      - name: Install kubeconform
+        env:
+          KUBECONFORM_VERSION: "0.6.7"
+        run: |
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
+
+      - name: Helm lint
+        run: helm lint ./charts/todo-app --strict
+
+      - name: Helm lint with prod values
+        run: helm lint ./charts/todo-app --strict -f ./charts/todo-app/values-prod.yaml
+
+      - name: Helm template (default values)
+        run: |
+          helm template todo-app ./charts/todo-app \
+            --namespace todo \
+            > /tmp/todo-app-default.yaml
+          echo "Rendered $(wc -l < /tmp/todo-app-default.yaml) lines"
+
+      - name: Helm template (prod values)
+        run: |
+          helm template todo-app ./charts/todo-app \
+            -f ./charts/todo-app/values-prod.yaml \
+            --namespace todo \
+            > /tmp/todo-app-prod.yaml
+          echo "Rendered $(wc -l < /tmp/todo-app-prod.yaml) lines"
+
+      - name: Validate manifests with kubeconform
+        run: |
+          kubeconform -strict -summary \
+            -kubernetes-version 1.31.0 \
+            -ignore-missing-schemas \
+            /tmp/todo-app-default.yaml /tmp/todo-app-prod.yaml
+
+      - name: Package chart
+        run: |
+          mkdir -p dist
+          helm package ./charts/todo-app --destination dist
+          ls -la dist/
+          helm show chart dist/todo-app-*.tgz
+
+      - name: Check Chart.yaml version format
+        run: |
+          version="$(grep '^version:' ./charts/todo-app/Chart.yaml | awk '{print $2}' | tr -d '"')"
+          appVersion="$(grep '^appVersion:' ./charts/todo-app/Chart.yaml | awk '{print $2}' | tr -d '"')"
+          echo "chart version=$version appVersion=$appVersion"
+          echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$'
+
+      - name: Upload packaged chart
+        uses: actions/upload-artifact@v4
+        with:
+          name: todo-app-chart
+          path: dist/*.tgz
+          if-no-files-found: error
+
+  manifests:
+    name: Validate platform YAML
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        env:
+          KUBECONFORM_VERSION: "0.6.7"
+        run: |
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+
+      - name: Validate jobs & platform namespaces
+        run: |
+          kubeconform -strict -summary \
+            -kubernetes-version 1.31.0 \
+            -ignore-missing-schemas \
+            ./jobs/ \
+            ./platform/namespace/
+
+      - name: YAML syntax check (apps + platform)
+        run: |
+          python3 <<'PY'
+          import sys, pathlib
+          try:
+              import yaml
+          except ImportError:
+              import subprocess
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "--user", "pyyaml"])
+              import yaml
+
+          roots = [
+              pathlib.Path("apps"),
+              pathlib.Path("platform"),
+              pathlib.Path("jobs"),
+          ]
+          errors = 0
+          for root in roots:
+              for path in sorted(root.rglob("*")):
+                  if path.suffix.lower() not in {".yaml", ".yml"}:
+                      continue
+                  text = path.read_text()
+                  if "{{" in text:
+                      continue
+                  try:
+                      list(yaml.safe_load_all(text))
+                  except Exception as exc:
+                      errors += 1
+                      print(f"FAIL {path}: {exc}")
+                  else:
+                      print(f"OK   {path}")
+          sys.exit(1 if errors else 0)
+          PY

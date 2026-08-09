@@ -1,0 +1,36 @@
+# Prune unused container images on the node (manual/ops reminder job).
+# Real cleanup on k3s: sudo k3s crictl rmi --prune
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: image-cleanup
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: image-cleanup
+    app.kubernetes.io/part-of: todo-platform
+spec:
+  schedule: "0 4 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: busybox:1.36
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Scheduled image-cleanup tick."
+                  echo "Run on the k3s host: sudo k3s crictl rmi --prune"
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  memory: 32Mi

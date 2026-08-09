@@ -1,0 +1,69 @@
+# Lightweight kube-prometheus-stack for a single t3.micro node.
+# Disable heavy bits; enable only what you need for the portfolio demo.
+fullnameOverride: monitoring
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: false
+    etcd: false
+    kubeScheduler: false
+    kubeControllerManager: false
+    kubeProxy: false
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+  adminPassword: changeme
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - grafana.todo.local
+
+prometheus:
+  prometheusSpec:
+    retention: 3d
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 384Mi
+    storageSpec: {}
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+kubeEtcd:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false

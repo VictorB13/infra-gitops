@@ -1,0 +1,30 @@
+# App-of-apps: ArgoCD syncs everything under apps/
+# Bootstrap: kubectl apply -f apps/root-app.yaml  (after ArgoCD is installed)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/VictorB13/infra-gitops.git
+    targetRevision: main
+    path: apps
+    directory:
+      recurse: true
+      exclude: "root-app.yaml"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

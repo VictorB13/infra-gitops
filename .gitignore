@@ -1,0 +1,17 @@
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*~
+
+# Helm
+charts/**/charts/
+charts/**/tmpcharts/
+*.tgz
+.helm/
+
+# Secrets — never commit real credentials
+**/secrets/*.env
+**/*-secret.local.yaml
+*.pem
+*.key

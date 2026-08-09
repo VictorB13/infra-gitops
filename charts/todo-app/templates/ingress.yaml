@@ -1,0 +1,71 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "todo-app.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Traefik (default on k3s)
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # FastAPI — API + health + docs
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "todo-app.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
+          - path: /docs
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "todo-app.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
+          - path: /openapi.json
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "todo-app.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "todo-app.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
+          - path: /ready
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "todo-app.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.port }}
+          # Frontend (catch-all)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "todo-app.fullname" . }}-frontend
+                port:
+                  number: {{ .Values.frontend.port }}
+{{- end }}

@@ -1,0 +1,44 @@
+# Installs cert-manager from the official Helm chart, then apply ClusterIssuers
+# via a second sync of platform/cert-manager (or include issuers after chart is up).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: v1.16.2
+      helm:
+        releaseName: cert-manager
+        values: |
+          crds:
+            enabled: true
+          prometheus:
+            enabled: false
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+    - repoURL: https://github.com/VictorB13/infra-gitops.git
+      targetRevision: main
+      path: platform/cert-manager
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

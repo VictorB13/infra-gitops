@@ -1,0 +1,28 @@
+# Production overrides for the single k3s / EC2 environment.
+# Rollback = change image tags back to a previous git SHA and sync.
+
+backend:
+  image:
+    repository: victorb13/todo-backend
+    tag: latest   # CI should set this to the git SHA, e.g. abc1234
+  replicas: 1
+
+frontend:
+  image:
+    repository: victorbutkov/todo-frontend
+    tag: latest
+  replicas: 1
+
+ingress:
+  enabled: true
+  className: traefik
+  host: todo.local
+  tls:
+    enabled: false
+
+config:
+  apiUrl: http://todo.local
+
+secrets:
+  postgresPassword: "changeme"
+  secretKey: "changeme-jwt-secret"

@@ -1,0 +1,57 @@
+# Logical Postgres dump → S3 (uses EC2 instance role / env credentials).
+# Requires: kubectl, aws cli image, and secret keys aligned with the Helm chart.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: todo-db-backup
+  namespace: todo
+  labels:
+    app.kubernetes.io/name: todo-db-backup
+    app.kubernetes.io/part-of: todo-app
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: todo-app-secrets
+                      key: postgres-password
+                - name: PGHOST
+                  value: todo-app-postgres
+                - name: PGUSER
+                  value: postgres
+                - name: PGDATABASE
+                  value: tododb
+                - name: S3_BUCKET
+                  value: todo-app-tfstate-victor
+                - name: S3_PREFIX
+                  value: db-backups
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  apk add --no-cache aws-cli >/dev/null
+                  STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+                  FILE="/tmp/tododb-${STAMP}.sql.gz"
+                  pg_dump | gzip > "$FILE"
+                  aws s3 cp "$FILE" "s3://${S3_BUCKET}/${S3_PREFIX}/$(basename "$FILE")"
+                  echo "Uploaded $(basename "$FILE")"
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
