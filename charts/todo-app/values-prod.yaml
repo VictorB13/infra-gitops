@@ -3,7 +3,7 @@
 
 backend:
   image:
-    repository: victorb13/todo-backend
+    repository: victorbutkov/todo-backend
     tag: latest   # CI should set this to the git SHA, e.g. abc1234
   replicas: 1
 
