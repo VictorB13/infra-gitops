@@ -38,9 +38,9 @@ helm package ./charts/todo-app --destination dist
 
 ## Deploy flow
 
-1. `app-todo` CI builds and pushes images to Docker Hub  
-2. Image tag updated in `charts/todo-app/values-prod.yaml`  
-3. ArgoCD syncs → cluster runs the new version  
+1. `app-todo` CI builds and pushes images (`:git-sha` + `:latest`)  
+2. CD job updates `charts/todo-app/values-prod.yaml` tags in this repo  
+3. ArgoCD (installed by Ansible on Build) syncs → cluster runs the new version  
 
 ## Notes
 
