@@ -4,13 +4,13 @@
 backend:
   image:
     repository: victorbutkov/todo-backend
-    tag: latest   # CI should set this to the git SHA, e.g. abc1234
+    tag: 4c3a57e9c7d4155015c32d06974eeaf8430bb82e
   replicas: 1
 
 frontend:
   image:
     repository: victorbutkov/todo-frontend
-    tag: latest
+    tag: 4c3a57e9c7d4155015c32d06974eeaf8430bb82e
   replicas: 1
 
 ingress:
