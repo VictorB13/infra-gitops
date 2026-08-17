@@ -1,5 +1,8 @@
 # Production overrides for the single k3s / EC2 environment.
 # Rollback = change image tags back to a previous git SHA and sync.
+#
+# App secrets (postgres password, JWT key) are NOT in git.
+# Build ensures them in AWS SSM; Ansible syncs SSM → K8s Secret
 
 backend:
   image:
@@ -24,5 +27,4 @@ config:
   apiUrl: http://todo.local
 
 secrets:
-  postgresPassword: "changeme"
-  secretKey: "changeme-jwt-secret"
+  create: false

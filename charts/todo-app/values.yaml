@@ -69,7 +69,9 @@ config:
   # Browser calls this URL for the API (no trailing /api — app.js already adds /api/...)
   apiUrl: http://todo.local
 
-# Secrets — override in values-prod or inject via SealedSecrets later
+# Secrets — local/CI defaults only. Prod uses secrets.create=false and
+# loads values from AWS SSM → K8s Secret (see Build + Ansible app_secrets).
 secrets:
+  create: true
   postgresPassword: "changeme"
   secretKey: "changeme-jwt-secret"
